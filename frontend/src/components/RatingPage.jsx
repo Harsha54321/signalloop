@@ -31,8 +31,8 @@ export default function RatingPage({ playerId }) {
     if (stars < 1) return;
     setStatus("saving");
     submitRating({ playerId, stars, comment })
-      .then(() => {
-        setStatus("saved");
+      .then((res) => {
+        setStatus(res && res.queued ? "queued" : "saved");
         loadSummary();
       })
       .catch(() => setStatus("error"));
@@ -59,6 +59,11 @@ export default function RatingPage({ playerId }) {
           {status === "saving" ? "Submitting…" : "Submit Rating"}
         </button>
         {status === "saved" && <p className="sl-rate-thanks">Thanks for the feedback! 🙌</p>}
+        {status === "queued" && (
+          <p className="sl-rate-thanks">
+            Saved on this device 📴 — it will be sent automatically when you're back online.
+          </p>
+        )}
         {status === "error" && <p className="sl-status--error">Couldn't submit, try again.</p>}
       </div>
 

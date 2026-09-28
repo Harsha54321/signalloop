@@ -11,13 +11,17 @@ single connected network with zero dangling ends and zero broken links.
 Levels are generated procedurally and are UNLIMITED - level_number can be
 any positive integer. Generation is deterministic per level_number (same
 seed => same puzzle every time), and difficulty (grid size, extra loops,
-number of scrambled tiles) scales up as level_number grows, so there is
-no ceiling on how many levels exist.
+number of scrambled tiles) scales up as level_number grows.
+
+IMPORTANT: this file has an exact twin in JavaScript at
+frontend/src/utils/levelGenerator.js. Both use the same hash + the same
+PRNG (mulberry32) so a given level number produces the *identical* puzzle
+in the browser (offline) and on the server. If you change one, change
+the other.
 
 Algorithm:
 1. Build a random spanning tree over the grid cells using randomized
-   Prim's algorithm -> guarantees every cell is reachable (a valid,
-   always-solvable circuit).
+   Prim's algorithm -> guarantees every cell is reachable (always solvable).
 2. For higher levels, sprinkle in extra edges to create loops -> harder,
    still always solvable.
 3. Each cell's "solved shape" = the set of absolute directions (N/E/S/W)
@@ -25,19 +29,56 @@ Algorithm:
 4. Scramble each tile with a random rotation offset (1-3 steps) so the
    board starts unsolved.
 """
-import hashlib
-import random
 
 DIRS = ["N", "E", "S", "W"]  # clockwise order
 OPPOSITE = {"N": "S", "S": "N", "E": "W", "W": "E"}
 DELTA = {"N": (-1, 0), "S": (1, 0), "E": (0, 1), "W": (0, -1)}
 
+M32 = 0xFFFFFFFF
+
+
+def _imul(a: int, b: int) -> int:
+    """32-bit integer multiply (same as JavaScript's Math.imul, unsigned)."""
+    return (a * b) & M32
+
+
+def _hash_seed(text: str) -> int:
+    """FNV-1a 32-bit hash of an ASCII string."""
+    h = 0x811C9DC5
+    for byte in text.encode("ascii"):
+        h ^= byte
+        h = _imul(h, 0x01000193)
+    return h
+
+
+class SeededRNG:
+    """mulberry32 PRNG - tiny, fast, and trivially identical in JS."""
+
+    def __init__(self, seed: int):
+        self.state = seed & M32
+
+    def random(self) -> float:
+        self.state = (self.state + 0x6D2B79F5) & M32
+        t = self.state
+        t = _imul(t ^ (t >> 15), t | 1)
+        t = ((t + _imul(t ^ (t >> 7), t | 61)) & M32) ^ t
+        return ((t ^ (t >> 14)) & M32) / 4294967296
+
+    def randrange(self, n: int) -> int:
+        return int(self.random() * n)
+
+    def choice(self, items):
+        return items[int(self.random() * len(items))]
+
+    def shuffle(self, items) -> None:
+        """In-place Fisher-Yates shuffle."""
+        for i in range(len(items) - 1, 0, -1):
+            j = int(self.random() * (i + 1))
+            items[i], items[j] = items[j], items[i]
+
 
 def _seed_for_level(level_number: int) -> int:
-    """Deterministic integer seed derived from the level number, so the
-    same level number always regenerates the exact same puzzle."""
-    digest = hashlib.sha256(f"signalloop-level-{level_number}".encode()).hexdigest()
-    return int(digest[:12], 16)
+    return _hash_seed(f"signalloop-level-{level_number}")
 
 
 def _grid_dims(level_number: int):
@@ -45,9 +86,7 @@ def _grid_dims(level_number: int):
     playable, then difficulty keeps rising via loops/scramble instead."""
     size = 3 + (level_number - 1) // 4
     size = min(size, 10)
-    rows = size
-    cols = size
-    return rows, cols
+    return size, size
 
 
 def _extra_loop_count(level_number: int, total_cells: int) -> int:
@@ -81,8 +120,7 @@ def generate_level(level_number: int) -> dict:
     if level_number < 1:
         raise ValueError("level_number must be >= 1")
 
-    seed = _seed_for_level(level_number)
-    rng = random.Random(seed)
+    rng = SeededRNG(_seed_for_level(level_number))
 
     rows, cols = _grid_dims(level_number)
     total_cells = rows * cols
@@ -93,7 +131,7 @@ def generate_level(level_number: int) -> dict:
     start = (rng.randrange(rows), rng.randrange(cols))
     visited.add(start)
 
-    frontier = []  # list of (cell, direction) edges leaving the visited set
+    frontier = []  # list of (cell, direction, neighbour) edges leaving the visited set
 
     def add_frontier(cell):
         r, c = cell
@@ -144,17 +182,16 @@ def generate_level(level_number: int) -> dict:
 
     # --- 3. Build cell data with solved shape + scrambled rotation ---
     cells = []
-    scrambled_count = 0
+    par_total = 0  # minimum number of taps needed to solve the whole board
     for r in range(rows):
         for c in range(cols):
             solved_edges = connections[(r, c)]
             name = shape_name(solved_edges)
 
             # how many distinct rotations actually look different
-            # (used so we never "scramble" into an already-solved look)
-            if name in ("straight",):
+            if name == "straight":
                 period = 2
-            elif name in ("cross",):
+            elif name == "cross":
                 period = 1
             else:
                 period = 4
@@ -162,11 +199,10 @@ def generate_level(level_number: int) -> dict:
             if period == 1:
                 rotation = 0
             else:
-                choices = [k for k in range(1, period)]
-                rotation = rng.choice(choices) if choices else 0
+                rotation = rng.choice(list(range(1, period)))
 
-            if rotation != 0:
-                scrambled_count += 1
+            # taps this tile needs to get back to its solved orientation
+            par_total += 0 if period == 1 else (period - rotation) % period
 
             cells.append(
                 {
@@ -185,6 +221,6 @@ def generate_level(level_number: int) -> dict:
         "cols": cols,
         "difficulty": difficulty,
         "extra_loops": extra,
-        "par_moves": max(scrambled_count, 1),
+        "par_moves": max(par_total, 1),
         "cells": cells,
     }

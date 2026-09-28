@@ -518,3 +518,94 @@ body {
 .sl-star-picker--lg .sl-star {
   font-size: 2.4rem;
 }
+
+/* ---------- Offline banner ---------- */
+.sl-offline-banner {
+  width: 100%;
+  max-width: 900px;
+  margin-top: 12px;
+  background: rgba(255, 209, 102, 0.12);
+  border: 1px solid #ffd166;
+  color: #ffd166;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+/* ---------- Hints ---------- */
+.sl-tile {
+  position: relative;
+}
+
+.sl-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.sl-btn--hint {
+  background: linear-gradient(135deg, #ffd166, #ff9f43);
+  color: #05121f;
+}
+
+.sl-hint-bar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.sl-hint-msg {
+  flex: 1;
+  min-width: 200px;
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.sl-hint-msg--active {
+  color: #ffd166;
+  font-weight: 600;
+}
+
+.sl-tile--hint .sl-tile__bg {
+  stroke: #ffd166;
+  stroke-width: 5;
+}
+
+.sl-tile--hint .sl-tile__svg {
+  animation: sl-hint-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes sl-hint-pulse {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 2px rgba(255, 209, 102, 0.6));
+  }
+  50% {
+    filter: drop-shadow(0 0 12px rgba(255, 209, 102, 1));
+  }
+}
+
+.sl-tile__hint-badge {
+  position: absolute;
+  top: 3%;
+  right: 3%;
+  background: #ffd166;
+  color: #05121f;
+  font-weight: 800;
+  font-size: clamp(0.6rem, 2.2vw, 0.85rem);
+  line-height: 1;
+  padding: 3px 5px;
+  border-radius: 999px;
+  pointer-events: none;
+}
+
+.sl-win-hints {
+  color: #ffd166;
+  font-size: 0.9rem;
+  margin: 0;
+}

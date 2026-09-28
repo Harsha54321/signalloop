@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import Tile from "./Tile";
+import HintBar from "./HintBar";
 import { fetchLevel, submitResult } from "../api";
 import { rotateEdges } from "../utils/tileShapes";
+import { HINTS_PER_LEVEL, tapsToSolve, pickHintTile } from "../utils/hints";
 
 function cellIsSolved(cell, rotation) {
   const current = rotateEdges(cell.shape, rotation).slice().sort();
@@ -17,6 +19,8 @@ export default function GameBoard({ levelNumber, playerId, onWin, onExit, onRate
   const [won, setWon] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [hintsLeft, setHintsLeft] = useState(HINTS_PER_LEVEL);
+  const [hintIdx, setHintIdx] = useState(null); // index of the tile currently hinted
   const timerRef = useRef(null);
 
   useEffect(() => {
@@ -26,6 +30,8 @@ export default function GameBoard({ levelNumber, playerId, onWin, onExit, onRate
     setWon(false);
     setMoves(0);
     setSeconds(0);
+    setHintsLeft(HINTS_PER_LEVEL);
+    setHintIdx(null);
 
     fetchLevel(levelNumber)
       .then((data) => {
@@ -55,6 +61,22 @@ export default function GameBoard({ levelNumber, playerId, onWin, onExit, onRate
     [level]
   );
 
+  // Once the hinted tile is correct, the hint is finished
+  useEffect(() => {
+    if (hintIdx === null || !level) return;
+    if (tapsToSolve(level.cells[hintIdx].shape, rotations[hintIdx]) === 0) {
+      setHintIdx(null);
+    }
+  }, [rotations, hintIdx, level]);
+
+  const handleHint = () => {
+    if (won || !level || hintsLeft <= 0 || hintIdx !== null) return;
+    const idx = pickHintTile(level.cells, rotations);
+    if (idx < 0) return;
+    setHintIdx(idx);
+    setHintsLeft((h) => h - 1);
+  };
+
   const handleRotate = (idx) => {
     if (won || !level) return;
     setRotations((prev) => {
@@ -69,6 +91,7 @@ export default function GameBoard({ levelNumber, playerId, onWin, onExit, onRate
           levelNumber,
           moves: moves + 1,
           timeSeconds: seconds,
+          parMoves: level.par_moves,
         })
           .then((progress) => onWin && onWin(progress))
           .catch(() => {});
@@ -81,6 +104,21 @@ export default function GameBoard({ levelNumber, playerId, onWin, onExit, onRate
   if (loading) return <div className="sl-status">Loading level {levelNumber}…</div>;
   if (error) return <div className="sl-status sl-status--error">Error: {error}</div>;
   if (!level) return null;
+
+  const hintTaps =
+    hintIdx !== null ? tapsToSolve(level.cells[hintIdx].shape, rotations[hintIdx]) : 0;
+  const hintActive = hintIdx !== null && hintTaps > 0;
+  let hintMessage;
+  if (hintActive) {
+    const c = level.cells[hintIdx];
+    hintMessage = `Tile in row ${c.row + 1}, column ${c.col + 1} is wrong - tap it ${hintTaps} time${
+      hintTaps > 1 ? "s" : ""
+    }.`;
+  } else if (hintsLeft <= 0) {
+    hintMessage = "No hints left on this level.";
+  } else {
+    hintMessage = "Stuck? A hint highlights one wrong tile and tells you how many taps it needs.";
+  }
 
   return (
     <div className="sl-board-wrap">
@@ -110,19 +148,34 @@ export default function GameBoard({ levelNumber, playerId, onWin, onExit, onRate
             shape={cell.shape}
             rotation={rotations[idx]}
             solved={won}
+            hint={idx === hintIdx ? hintTaps : 0}
             onClick={() => handleRotate(idx)}
           />
         ))}
       </div>
+
+      <HintBar
+        hintsLeft={hintsLeft}
+        hintsTotal={HINTS_PER_LEVEL}
+        active={hintActive}
+        message={hintMessage}
+        onHint={handleHint}
+        disabled={won}
+      />
 
       {won && (
         <div className="sl-win-overlay">
           <div className="sl-win-card">
             <h2>⚡ Circuit Complete!</h2>
             <p>
-              Level {level.level_number} solved in {moves + 1} moves,{" "}
+              Level {level.level_number} solved in {moves} moves,{" "}
               {seconds}s.
             </p>
+            {hintsLeft < HINTS_PER_LEVEL && (
+              <p className="sl-win-hints">
+                💡 Hints used: {HINTS_PER_LEVEL - hintsLeft}
+              </p>
+            )}
             <div className="sl-win-actions">
               <button className="sl-btn" onClick={onExit}>
                 Level select

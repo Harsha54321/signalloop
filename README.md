@@ -97,6 +97,34 @@ Because generation is deterministic per `level_number` (SHA-256-derived
 seed), level 9999 is exactly the same puzzle every time anyone loads it,
 with no need to store millions of levels in the database.
 
+## Hints (work offline)
+
+Every level gives **3 hints**. Tap **💡 Hint** under the board: it highlights
+one wrong tile with a gold glow and a badge (`↻2` = tap it 2 times), and the
+message names its row and column. The badge counts down as you tap, the
+button is disabled while a hint is active, and hints reset on each new level.
+Hints are computed in the browser (`frontend/src/utils/hints.js`) from the
+level data, so they need no internet. They do not reduce your stars.
+
+## Offline play (no internet needed)
+
+SignalLoop is an offline-first PWA:
+
+- **Levels are generated in the browser** (`frontend/src/utils/levelGenerator.js`),
+  a twin of `backend/game/level_generator.py` - same hash + same PRNG, so
+  level N is the identical puzzle online and offline. If you change the
+  algorithm, change both files.
+- **Progress is saved on the device** (localStorage). When there is no
+  internet, results are queued and sent to the Django API automatically
+  when the connection returns.
+- **A service worker** (`frontend/public/service-worker.js`) caches the app,
+  so it opens with no internet after the first visit. It is only active in
+  the production build (`npm run build`), never during `npm start`.
+- Needs internet: leaderboard and the community rating summary. Your own
+  rating is saved and sent later.
+- Install like an app: Chrome/Edge -> address bar "Install" icon; Android
+  -> menu -> "Add to Home screen"; iPhone -> Share -> "Add to Home Screen".
+
 ## Notes
 
 - No user accounts/login required — a per-browser id tracks progress.

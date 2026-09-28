@@ -1,5 +1,5 @@
 from django.test import TestCase
-from .level_generator import generate_level, DELTA, OPPOSITE
+from .level_generator import generate_level, rotate_edges, DELTA, OPPOSITE
 
 
 class LevelGeneratorTests(TestCase):
@@ -40,3 +40,16 @@ class LevelGeneratorTests(TestCase):
         late = generate_level(200)
         self.assertGreaterEqual(late["rows"] * late["cols"], early["rows"] * early["cols"])
         self.assertGreater(late["difficulty"], early["difficulty"])
+
+    def test_par_moves_is_the_true_minimum_number_of_taps(self):
+        """Perfect play must be able to earn 3 stars, so par has to equal the
+        minimum taps needed (each tile needs 0-3 taps, not always 1)."""
+        for level_number in [1, 7, 30, 250]:
+            data = generate_level(level_number)
+            optimal = 0
+            for cell in data["cells"]:
+                shape = set(cell["shape"])
+                optimal += next(
+                    t for t in range(4) if rotate_edges(shape, cell["rotation"] + t) == shape
+                )
+            self.assertEqual(data["par_moves"], max(optimal, 1))

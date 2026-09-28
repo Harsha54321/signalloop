@@ -27,6 +27,11 @@ export default function HowToPlay() {
           <p>Levels are generated on the fly — the grid grows and extra loops get added as you climb, so difficulty keeps rising forever.</p>
         </div>
         <div className="sl-howto-card">
+          <div className="sl-howto-card__icon">💡</div>
+          <h3>Hints (work offline)</h3>
+          <p>Stuck? Tap the Hint button. It highlights one wrong tile and shows how many taps it needs. You get 3 hints on every level, and no internet is required.</p>
+        </div>
+        <div className="sl-howto-card">
           <div className="sl-howto-card__icon">🏆</div>
           <h3>Compete</h3>
           <p>Check the Leaderboard tab for the fastest solve times on any level number, across every player.</p>

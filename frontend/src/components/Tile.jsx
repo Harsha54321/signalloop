@@ -19,17 +19,23 @@ function armPath(dir) {
   }
 }
 
-export default function Tile({ shape, rotation, solved, onClick, animate }) {
+// `hint` = number of taps this tile still needs (0 / undefined = no hint on it)
+export default function Tile({ shape, rotation, solved, onClick, animate, hint }) {
   const currentEdges = rotateEdges(shape, rotation);
+  const hinted = hint > 0;
 
   return (
     <div
       className={`sl-tile ${solved ? "sl-tile--solved" : ""} ${
         animate ? "sl-tile--spin" : ""
-      }`}
+      } ${hinted ? "sl-tile--hint" : ""}`}
       onClick={onClick}
       role="button"
-      aria-label={`Rotate tile, currently open ${currentEdges.join(",")}`}
+      aria-label={
+        hinted
+          ? `Hint: tap this tile ${hint} time${hint > 1 ? "s" : ""}`
+          : `Rotate tile, currently open ${currentEdges.join(",")}`
+      }
     >
       <svg viewBox="0 0 100 100" className="sl-tile__svg">
         <rect x="0" y="0" width="100" height="100" className="sl-tile__bg" />
@@ -38,6 +44,7 @@ export default function Tile({ shape, rotation, solved, onClick, animate }) {
           <path key={d} d={armPath(d)} className="sl-tile__arm" />
         ))}
       </svg>
+      {hinted && <span className="sl-tile__hint-badge">↻{hint}</span>}
     </div>
   );
 }

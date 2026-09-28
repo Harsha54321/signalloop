@@ -12,7 +12,13 @@ export default function LeaderboardPage() {
     setError(null);
     fetchLeaderboard(levelNumber)
       .then(setRows)
-      .catch((e) => setError(e.message))
+      .catch((e) =>
+        setError(
+          navigator.onLine
+            ? e.message
+            : "You're offline - the leaderboard needs an internet connection. Keep playing, it will work again once you're back online."
+        )
+      )
       .finally(() => setLoading(false));
   };
 
