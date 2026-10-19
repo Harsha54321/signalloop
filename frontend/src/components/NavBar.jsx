@@ -1,7 +1,7 @@
 import React from "react";
 
 const TABS = [
-  { id: "play", label: "🎮 Play" },
+  { id: "games", label: "🎮 Games" },
   { id: "leaderboard", label: "🏆 Leaderboard" },
   { id: "howto", label: "📘 How to Play" },
   { id: "stats", label: "📊 My Stats" },
@@ -12,7 +12,7 @@ export default function NavBar({ active, onNavigate }) {
   return (
     <nav className="sl-navbar">
       <div className="sl-navbar__brand">
-        Signal<span className="sl-title__accent">Loop</span>
+        Signal<span className="sl-title__accent">Loop</span> <span className="sl-navbar__sub">Arcade</span>
       </div>
       <div className="sl-navbar__tabs">
         {TABS.map((t) => (

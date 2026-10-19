@@ -1,6 +1,6 @@
 {
-  "short_name": "SignalLoop",
-  "name": "SignalLoop - Infinite Circuit Puzzle",
+  "short_name": "SL Arcade",
+  "name": "SignalLoop Arcade",
   "description": "Rotate tiles to reconnect the circuit. Unlimited levels, plays offline.",
   "start_url": ".",
   "scope": ".",

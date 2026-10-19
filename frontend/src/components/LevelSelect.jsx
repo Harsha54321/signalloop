@@ -3,7 +3,7 @@ import { fetchProgress } from "../api";
 
 const PAGE_SIZE = 20;
 
-export default function LevelSelect({ playerId, onPlay }) {
+export default function LevelSelect({ playerId, onPlay, onBack }) {
   const [maxUnlocked, setMaxUnlocked] = useState(1);
   const [progressMap, setProgressMap] = useState({});
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
@@ -29,6 +29,11 @@ export default function LevelSelect({ playerId, onPlay }) {
 
   return (
     <div className="sl-level-select">
+      {onBack && (
+        <button type="button" className="sl-btn sl-btn--ghost sl-back" onClick={onBack}>
+          ← All games
+        </button>
+      )}
       <h1 className="sl-title">
         Signal<span className="sl-title__accent">Loop</span>
       </h1>

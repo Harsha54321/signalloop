@@ -6,7 +6,13 @@ from django.db.models import Avg, Count
 
 from .level_generator import generate_level
 from .models import PlayerProgress, GameRating
-from .serializers import PlayerProgressSerializer, SubmitResultSerializer, GameRatingSerializer
+from .serializers import (
+    SCORE_GAMES,
+    GameRatingSerializer,
+    PlayerProgressSerializer,
+    SubmitResultSerializer,
+    SubmitScoreSerializer,
+)
 
 
 @api_view(["GET"])
@@ -30,7 +36,17 @@ def _stars_for(moves: int, par_moves: int) -> int:
 
 @api_view(["GET"])
 def progress_list(request, player_id: str):
-    qs = PlayerProgress.objects.filter(player_id=player_id).order_by("level_number")
+    """Saved results for one player.
+
+    By default only SignalLoop rows are returned (that's what the original
+    level-select screen expects). Use ?game=<id> for another game, or
+    ?game=all to get every game at once (used by the hub's stats page).
+    """
+    game = request.query_params.get("game", "signalloop")
+    qs = PlayerProgress.objects.filter(player_id=player_id)
+    if game != "all":
+        qs = qs.filter(game=game)
+    qs = qs.order_by("game", "variant", "level_number")
     return Response(PlayerProgressSerializer(qs, many=True).data)
 
 
@@ -45,6 +61,8 @@ def submit_result(request):
 
     obj, _created = PlayerProgress.objects.get_or_create(
         player_id=payload["player_id"],
+        game="signalloop",
+        variant="",
         level_number=payload["level_number"],
     )
 
@@ -68,7 +86,9 @@ def submit_result(request):
 def leaderboard(request, level_number: int):
     """Top 10 fastest completions for a given level, across all players."""
     qs = (
-        PlayerProgress.objects.filter(level_number=level_number, completed=True)
+        PlayerProgress.objects.filter(
+            game="signalloop", level_number=level_number, completed=True
+        )
         .exclude(best_time_seconds=None)
         .order_by("best_time_seconds")[:10]
     )
@@ -125,3 +145,69 @@ def my_rating(request, player_id: str):
     if not obj:
         return Response(None)
     return Response(GameRatingSerializer(obj).data)
+
+
+@api_view(["POST"])
+def submit_score(request):
+    """Save a finished run of one of the score-based games.
+
+    The best *score* per (player, game, variant, level) is kept; stars and
+    the secondary stat keep their own maximum. Sending a worse run later
+    never lowers a saved result, so replaying (or re-syncing the offline
+    queue) is always safe.
+    """
+    serializer = SubmitScoreSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    p = serializer.validated_data
+
+    obj, created = PlayerProgress.objects.get_or_create(
+        player_id=p["player_id"],
+        game=p["game"],
+        variant=p["variant"],
+        level_number=p["level_number"],
+    )
+
+    if created or obj.best_score is None or p["score"] > obj.best_score:
+        obj.best_score = p["score"]
+        obj.best_moves = p["moves"]
+        obj.best_time_seconds = p["time_seconds"]
+    obj.stars = max(obj.stars, p["stars"])
+    obj.best_extra = max(obj.best_extra or 0, p["extra"])
+    obj.completed = True
+    obj.save()
+
+    return Response(PlayerProgressSerializer(obj).data, status=status.HTTP_200_OK)
+
+
+@api_view(["GET"])
+def score_leaderboard(request, game: str):
+    """Top 10 scores for one game. Filter with ?variant=<theme/world> and
+    ?level=<n> (arcade games use level 0)."""
+    if game not in SCORE_GAMES:
+        return Response({"error": "unknown game"}, status=status.HTTP_404_NOT_FOUND)
+
+    variant = request.query_params.get("variant", "")
+    try:
+        level = int(request.query_params.get("level", 0))
+    except ValueError:
+        return Response({"error": "level must be a number"}, status=status.HTTP_400_BAD_REQUEST)
+
+    qs = (
+        PlayerProgress.objects.filter(
+            game=game, variant=variant, level_number=level, completed=True
+        )
+        .exclude(best_score=None)
+        .order_by("-best_score", "best_time_seconds")[:10]
+    )
+    return Response(
+        [
+            {
+                "player_id": row.player_id[:8],
+                "best_score": row.best_score,
+                "stars": row.stars,
+                "best_extra": row.best_extra,
+                "best_time_seconds": row.best_time_seconds,
+            }
+            for row in qs
+        ]
+    )

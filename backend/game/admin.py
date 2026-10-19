@@ -4,8 +4,11 @@ from .models import PlayerProgress, GameRating
 
 @admin.register(PlayerProgress)
 class PlayerProgressAdmin(admin.ModelAdmin):
-    list_display = ("player_id", "level_number", "completed", "stars", "best_moves", "best_time_seconds")
-    list_filter = ("completed", "stars")
+    list_display = (
+        "player_id", "game", "variant", "level_number", "completed",
+        "stars", "best_score", "best_moves", "best_time_seconds",
+    )
+    list_filter = ("game", "completed", "stars")
     search_fields = ("player_id",)
 
 

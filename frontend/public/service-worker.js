@@ -6,7 +6,7 @@
  *
  * Bump CACHE_VERSION if you ever need to force every device to drop old caches.
  */
-const CACHE_VERSION = "signalloop-v1";
+const CACHE_VERSION = "signalloop-v2";
 
 const CORE_FILES = [
   "./",

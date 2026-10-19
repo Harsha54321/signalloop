@@ -1,3 +1,26 @@
+# SignalLoop Arcade
+
+Five games in one offline-first app (Django + React + SQL):
+
+| Game | Type | Notes |
+|---|---|---|
+| SignalLoop | Logic | Infinite circuit puzzle, hints |
+| Word Hunt | Words | 7 themes, endless levels, 3 hints per level |
+| Memory Match | Memory | 6 themes, endless levels, 3 peeks per level |
+| Neon Stack | Arcade | 5 worlds, unlock by reaching 20 floors; Guide / Slow hints |
+| Star Dodger | Arcade | 3 worlds, 3 ships, power-ups |
+
+## Offline
+After the first visit with internet, all five games run with no connection.
+Scores are saved on the device and synced to the server when you are online again.
+Leaderboards and the community rating need internet.
+
+## Deploy
+`git add . && git commit -m "arcade" && git push` - Render runs `build.sh` (migrations included)
+and Netlify rebuilds the frontend. Open the site once online so the new version is cached.
+
+---
+
 # SignalLoop — Infinite Circuit Puzzle
 
 A new-style rotation puzzle: every level is a grid of circuit tiles that
